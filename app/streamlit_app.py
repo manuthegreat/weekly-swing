@@ -52,16 +52,34 @@ def _normalize_end(end_str: str):
 
 end_val = _normalize_end(end_date)
 
+def _load_universe(label: str, loader):
+    try:
+        return loader()
+    except Exception as exc:
+        st.error(f"{label} universe failed: {exc}")
+        return None
+
+
 if st.button("Run backtests"):
     with st.spinner("Building universes..."):
-        hk_uni = get_hsi_universe()
-        us_uni = get_sp500_universe()
-        sg_uni = get_sti_universe()
+        hk_uni = _load_universe("HK", get_hsi_universe)
+        us_uni = _load_universe("US", get_sp500_universe)
+        sg_uni = _load_universe("SG", get_sti_universe)
+
+    if run_hk and hk_uni is None:
+        st.stop()
+    if run_us and us_uni is None:
+        st.stop()
+    if run_sg and sg_uni is None:
+        st.stop()
 
     countries = []
-    if run_hk: countries.append(("HK", hk_uni, cfg_hk))
-    if run_us: countries.append(("US", us_uni, cfg_us))
-    if run_sg: countries.append(("SG", sg_uni, cfg_sg))
+    if run_hk and hk_uni is not None:
+        countries.append(("HK", hk_uni, cfg_hk))
+    if run_us and us_uni is not None:
+        countries.append(("US", us_uni, cfg_us))
+    if run_sg and sg_uni is not None:
+        countries.append(("SG", sg_uni, cfg_sg))
 
     if not countries:
         st.warning("Select at least one country in the sidebar.")
