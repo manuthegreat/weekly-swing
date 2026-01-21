@@ -1321,57 +1321,41 @@ def run_country_backtest(
     start: str = "2016-01-01",
     end: Optional[str] = None,
     n_signal_days: int = 5,
-) -> None:
+) -> Dict[str, pd.DataFrame]:
     tickers = universe["Ticker"].dropna().astype(str).unique().tolist()
     print(f"\n[{country}] Universe tickers: {len(tickers)}")
 
     df = load_or_build_cache(country, universe, cfg, start=start, end=end)
+
     trades, entries, summary_overall, summary_by, exit_breakdown, summary_by_year, signals = run_backtest(
         df, cfg, indicators_precomputed=True
     )
 
-    print(f"\n[{country}] Overall (closed trades only):")
-    print(summary_overall.to_string(index=False))
-
-    print(f"\n[{country}] Summary by setup & entry (closed trades only):")
-    print(summary_by.to_string(index=False))
-
-    print(f"\n[{country}] Exit reason breakdown (closed trades only):")
-    if exit_breakdown.empty:
-        print("(no trades)")
-    else:
-        print(exit_breakdown.to_string(index=False, float_format=lambda x: f"{x:,.4f}"))
-
-    print(f"\n[{country}] Yearly stats (closed trades only):")
-    if summary_by_year.empty:
-        print("(no trades)")
-    else:
-        print(summary_by_year.to_string(index=False, float_format=lambda x: f"{x:,.4f}"))
-
-    # --- NEW: Score + Market Cap stats (closed trades only)
+    # --- Enrich trades with score + market cap (join on signal_date/ticker/setup)
     trades_enriched = trades
     if (trades is not None) and (not trades.empty) and (signals is not None) and (not signals.empty):
         sig_small = signals[["signal_date", "ticker", "setup_tag", "score", "market_cap"]].copy()
         sig_small["signal_date"] = pd.to_datetime(sig_small["signal_date"]).dt.normalize()
         trades_enriched = trades.merge(sig_small, on=["signal_date", "ticker", "setup_tag"], how="left")
 
-    print(f"\n[{country}] Score bucket stats (closed trades only):")
     score_stats = summarize_trades_by_score_bins(trades_enriched)
-    if score_stats.empty:
-        print("(no score-linked trades)")
-    else:
-        print(score_stats.to_string(index=False, float_format=lambda x: f"{x:,.4f}"))
-
-    print(f"\n[{country}] Market cap bucket stats (closed trades only):")
     mcap_stats = summarize_trades_by_mcap_bins(trades_enriched, q=5)
-    if mcap_stats.empty:
-        print("(no market-cap-linked trades)")
-    else:
-        print(mcap_stats.to_string(index=False, float_format=lambda x: f"{x:,.4f}"))
 
-    show_grouped_signals_last_n_days(
+    signals_grouped = show_grouped_signals_last_n_days(
         signals,
         n_days=n_signal_days,
         title=f"{country} CURRENT SIGNALS",
     )
 
+    return {
+        "trades": trades if trades is not None else pd.DataFrame(),
+        "entries": entries if entries is not None else pd.DataFrame(),
+        "summary_overall": summary_overall if summary_overall is not None else pd.DataFrame(),
+        "summary_by": summary_by if summary_by is not None else pd.DataFrame(),
+        "exit_breakdown": exit_breakdown if exit_breakdown is not None else pd.DataFrame(),
+        "summary_by_year": summary_by_year if summary_by_year is not None else pd.DataFrame(),
+        "signals": signals if signals is not None else pd.DataFrame(),
+        "signals_grouped": signals_grouped if signals_grouped is not None else pd.DataFrame(),
+        "score_stats": score_stats if score_stats is not None else pd.DataFrame(),
+        "mcap_stats": mcap_stats if mcap_stats is not None else pd.DataFrame(),
+    }
