@@ -1,1 +1,7 @@
+cache_daily/
+__pycache__/
+*.pyc
+.venv/
+.env
+.DS_Store
 
