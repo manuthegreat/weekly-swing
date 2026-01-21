@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-from src.engine import (
+from engine import (
     get_hsi_universe, get_sp500_universe, get_sti_universe,
     BacktestConfig,
     run_country_backtest,
