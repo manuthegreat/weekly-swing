@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 
 from src.engine import (
     get_hsi_universe, get_sp500_universe, get_sti_universe,
@@ -9,18 +8,12 @@ from src.engine import (
 )
 
 st.set_page_config(page_title="Weekly Swing Multi Backtester", layout="wide")
-
 st.title("Weekly Swing Multi Backtester (HK / US / SG)")
-st.caption("This is the Streamlit UI version of your golden-source backtester. No strategy logic changed.")
+st.caption("Streamlit UI version of your backtester.")
 
-# ------------------------
-# Sidebar controls
-# ------------------------
 st.sidebar.header("Run Settings")
-
 start_date = st.sidebar.text_input("Start date (YYYY-MM-DD)", value="2016-01-01")
 end_date = st.sidebar.text_input("End date (YYYY-MM-DD) (blank = today)", value="")
-
 n_signal_days = st.sidebar.slider("Current signals window (trading days)", 1, 20, 5)
 
 run_hk = st.sidebar.checkbox("Run HK", value=True)
@@ -32,55 +25,25 @@ st.sidebar.subheader("Advanced")
 show_raw_trades = st.sidebar.checkbox("Show raw trades table", value=False)
 show_raw_signals = st.sidebar.checkbox("Show raw signals table", value=False)
 
-# ------------------------
-# Country configs (same as your script)
-# ------------------------
 cfg_hk = BacktestConfig(
-    max_open_positions=20,
-    max_entries_per_day=10,
-    profit_target_mult=1.10,
-    holding_days_max=30,
-    turnover_baseline_days=10,
-    tight_range_5d_max=0.13,
-    close_pos20_min=0.58,
-    pause_near_high_frac=0.965,
-    pause_range20_max=0.24,
-    max_hh_dist_from_close=0.25,
-    turnover_expansion_min_A=1.05,
-    turnover_expansion_min_C=1.03,
-    breakout_buffer_pct=0.0,
+    max_open_positions=20, max_entries_per_day=10, profit_target_mult=1.10, holding_days_max=30,
+    turnover_baseline_days=10, tight_range_5d_max=0.13, close_pos20_min=0.58,
+    pause_near_high_frac=0.965, pause_range20_max=0.24, max_hh_dist_from_close=0.25,
+    turnover_expansion_min_A=1.05, turnover_expansion_min_C=1.03, breakout_buffer_pct=0.0,
 )
 
 cfg_us = BacktestConfig(
-    max_open_positions=20,
-    max_entries_per_day=10,
-    profit_target_mult=1.10,
-    holding_days_max=30,
-    turnover_baseline_days=10,
-    tight_range_5d_max=0.09,
-    close_pos20_min=0.65,
-    pause_near_high_frac=0.985,
-    pause_range20_max=0.18,
-    max_hh_dist_from_close=0.15,
-    turnover_expansion_min_A=1.20,
-    turnover_expansion_min_C=1.15,
-    breakout_buffer_pct=0.003,
+    max_open_positions=20, max_entries_per_day=10, profit_target_mult=1.10, holding_days_max=30,
+    turnover_baseline_days=10, tight_range_5d_max=0.09, close_pos20_min=0.65,
+    pause_near_high_frac=0.985, pause_range20_max=0.18, max_hh_dist_from_close=0.15,
+    turnover_expansion_min_A=1.20, turnover_expansion_min_C=1.15, breakout_buffer_pct=0.003,
 )
 
 cfg_sg = BacktestConfig(
-    max_open_positions=20,
-    max_entries_per_day=10,
-    profit_target_mult=1.10,
-    holding_days_max=30,
-    turnover_baseline_days=10,
-    tight_range_5d_max=0.11,
-    close_pos20_min=0.60,
-    pause_near_high_frac=0.970,
-    pause_range20_max=0.22,
-    max_hh_dist_from_close=0.20,
-    turnover_expansion_min_A=1.15,
-    turnover_expansion_min_C=1.10,
-    breakout_buffer_pct=0.001,
+    max_open_positions=20, max_entries_per_day=10, profit_target_mult=1.10, holding_days_max=30,
+    turnover_baseline_days=10, tight_range_5d_max=0.11, close_pos20_min=0.60,
+    pause_near_high_frac=0.970, pause_range20_max=0.22, max_hh_dist_from_close=0.20,
+    turnover_expansion_min_A=1.15, turnover_expansion_min_C=1.10, breakout_buffer_pct=0.001,
 )
 
 def _normalize_end(end_str: str):
@@ -89,9 +52,6 @@ def _normalize_end(end_str: str):
 
 end_val = _normalize_end(end_date)
 
-# ------------------------
-# Run button
-# ------------------------
 if st.button("Run backtests"):
     with st.spinner("Building universes..."):
         hk_uni = get_hsi_universe()
@@ -113,7 +73,7 @@ if st.button("Run backtests"):
         with tab:
             st.subheader(f"{country} Results")
 
-            with st.spinner(f"Running {country} backtest (this can take time the first run)..."):
+            with st.spinner(f"Running {country} backtest..."):
                 result = run_country_backtest(
                     country=country,
                     universe=uni,
@@ -123,8 +83,7 @@ if st.button("Run backtests"):
                     n_signal_days=n_signal_days,
                 )
 
-            # --- KPI cards
-            overall = result["summary_overall"]
+            overall = result.get("summary_overall")
             if overall is not None and not overall.empty:
                 row = overall.iloc[0].to_dict()
                 c1, c2, c3, c4 = st.columns(4)
@@ -135,52 +94,53 @@ if st.button("Run backtests"):
                 c4.metric("Profit factor", f'{pf:.2f}' if pd.notna(pf) else "NA")
 
             st.markdown("### Overall (closed trades only)")
-            st.dataframe(result["summary_overall"], use_container_width=True)
+            st.dataframe(result.get("summary_overall"), use_container_width=True)
 
             st.markdown("### Summary by setup & entry")
-            st.dataframe(result["summary_by"], use_container_width=True)
+            st.dataframe(result.get("summary_by"), use_container_width=True)
 
             st.markdown("### Exit reason breakdown")
-            st.dataframe(result["exit_breakdown"], use_container_width=True)
+            st.dataframe(result.get("exit_breakdown"), use_container_width=True)
 
             st.markdown("### Yearly stats")
-            st.dataframe(result["summary_by_year"], use_container_width=True)
+            st.dataframe(result.get("summary_by_year"), use_container_width=True)
 
             st.markdown("### Score bucket stats")
-            st.dataframe(result["score_stats"], use_container_width=True)
+            st.dataframe(result.get("score_stats"), use_container_width=True)
 
             st.markdown("### Market cap bucket stats")
-            st.dataframe(result["mcap_stats"], use_container_width=True)
+            st.dataframe(result.get("mcap_stats"), use_container_width=True)
 
             st.markdown("### Current signals (consolidated)")
-            st.dataframe(result["signals_grouped"], use_container_width=True)
+            st.dataframe(result.get("signals_grouped"), use_container_width=True)
 
-            # Optional raw tables
             if show_raw_trades:
                 st.markdown("### Raw trades table")
-                st.dataframe(result["trades"], use_container_width=True)
+                st.dataframe(result.get("trades"), use_container_width=True)
 
             if show_raw_signals:
                 st.markdown("### Raw signals table")
-                st.dataframe(result["signals"], use_container_width=True)
+                st.dataframe(result.get("signals"), use_container_width=True)
 
-            # Downloads
             st.markdown("### Downloads")
             colA, colB = st.columns(2)
             with colA:
-                st.download_button(
-                    "Download trades (CSV)",
-                    data=result["trades"].to_csv(index=False).encode("utf-8"),
-                    file_name=f"{country}_trades.csv",
-                    mime="text/csv",
-                )
+                trades_df = result.get("trades")
+                if trades_df is not None and not trades_df.empty:
+                    st.download_button(
+                        "Download trades (CSV)",
+                        data=trades_df.to_csv(index=False).encode("utf-8"),
+                        file_name=f"{country}_trades.csv",
+                        mime="text/csv",
+                    )
             with colB:
-                st.download_button(
-                    "Download current signals (CSV)",
-                    data=result["signals_grouped"].to_csv(index=False).encode("utf-8"),
-                    file_name=f"{country}_current_signals.csv",
-                    mime="text/csv",
-                )
-
+                sig_df = result.get("signals_grouped")
+                if sig_df is not None and not sig_df.empty:
+                    st.download_button(
+                        "Download current signals (CSV)",
+                        data=sig_df.to_csv(index=False).encode("utf-8"),
+                        file_name=f"{country}_current_signals.csv",
+                        mime="text/csv",
+                    )
 else:
     st.info("Set options in the sidebar, then click **Run backtests**.")
