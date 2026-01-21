@@ -230,9 +230,18 @@ def http_get_with_retries(
 
 def get_sp500_universe() -> pd.DataFrame:
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    r = http_get_with_retries(url, headers={"User-Agent": "Mozilla/5.0"})
+    headers = {"User-Agent": "Mozilla/5.0"}
+    r = http_get_with_retries(url, headers=headers, timeout=30)
     tables = pd.read_html(StringIO(r.text))
-    df = next(t for t in tables if "Symbol" in t.columns)
+
+    df = None
+    for t in tables:
+        if "Symbol" in t.columns:
+            df = t.copy()
+            break
+    if df is None:
+        raise ValueError("Could not find S&P 500 table on Wikipedia.")
+
     df["Ticker"] = df["Symbol"].astype(str).str.replace(".", "-", regex=False)
     df["Name"] = df["Security"]
     df["Sector"] = df["GICS Sector"]
@@ -242,25 +251,55 @@ def get_sp500_universe() -> pd.DataFrame:
 
 def get_hsi_universe() -> pd.DataFrame:
     url = "https://en.wikipedia.org/wiki/Hang_Seng_Index"
-    r = http_get_with_retries(url, headers={"User-Agent": "Mozilla/5.0"})
+    headers = {"User-Agent": "Mozilla/5.0"}
+    r = http_get_with_retries(url, headers=headers, timeout=30)
     tables = pd.read_html(StringIO(r.text))
-    df = next(t for t in tables if any("sehk" in str(c).lower() or "code" in str(c).lower() for c in t.columns))
+
+    df = None
+    for t in tables:
+        cols = [str(c).lower() for c in t.columns]
+        if any(x in cols for x in ["ticker", "constituent", "sub-index", "sub index", "sehk", "code"]):
+            df = t.copy()
+            break
+    if df is None:
+        raise ValueError("No HSI table found on Wikipedia page.")
+
     df.columns = [str(c).lower() for c in df.columns]
 
-    ticker_col = next(c for c in df.columns if "sehk" in c or "code" in c or "ticker" in c)
+    ticker_col = None
+    for c in df.columns:
+        if "sehk" in c or "ticker" in c or "code" in c:
+            ticker_col = c
+            break
+    if ticker_col is None:
+        raise ValueError("Could not find SEHK ticker column")
+
     df["Ticker"] = (
         df[ticker_col]
         .astype(str)
-        .str.extract(r"(\d+)")[0]
+        .str.extract(r"(\d+)")
+        .iloc[:, 0]
         .astype(int)
         .astype(str)
         .str.zfill(4)
         + ".HK"
     )
 
-    name_col = "name" if "name" in df.columns else ticker_col
+    if "name" in df.columns:
+        name_col = "name"
+    else:
+        possible = [c for c in df.columns if c not in [ticker_col, "sub-index", "sub index"]]
+        name_col = possible[0] if possible else ticker_col
     df["Name"] = df[name_col]
-    df["Sector"] = df.get("sub-index", df.get("industry", None))
+
+    if "sub-index" in df.columns:
+        df["Sector"] = df["sub-index"]
+    elif "sub index" in df.columns:
+        df["Sector"] = df["sub index"]
+    elif "industry" in df.columns:
+        df["Sector"] = df["industry"]
+    else:
+        df["Sector"] = None
 
     out = df[["Ticker", "Name", "Sector"]].copy()
     out["Country"] = "HK"
