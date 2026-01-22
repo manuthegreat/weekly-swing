@@ -53,7 +53,7 @@ class BacktestConfig:
 UNIVERSE_RULES = {
     "HK": dict(
         mcap_min=5e9,
-        mcap_max=80e9,
+        mcap_max=250e9,
         adv_turnover_20_min=100e6,
     ),
     "US": dict(
