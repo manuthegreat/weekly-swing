@@ -33,6 +33,29 @@ def artifact_dir(country: str) -> Path:
     return ARTIFACTS_DIR / country.lower()
 
 
+def _format_market_cap(value: float) -> str:
+    try:
+        return f"{float(value):,.2f}"
+    except (TypeError, ValueError):
+        return ""
+
+
+def _format_bucket_label(raw: str) -> str:
+    cleaned = raw.strip()
+    if not cleaned:
+        return ""
+    cleaned = cleaned.replace("(", "").replace(")", "").replace("[", "").replace("]", "")
+    parts = [p.strip() for p in cleaned.split(",")]
+    if len(parts) != 2:
+        return raw
+    try:
+        low = float(parts[0])
+        high = float(parts[1])
+    except ValueError:
+        return raw
+    return f"{_format_market_cap(low)} – {_format_market_cap(high)}"
+
+
 def main() -> None:
     st.set_page_config(page_title="Weekly Swing", layout="wide")
     st.title("Weekly Swing Dashboard")
@@ -61,7 +84,13 @@ def main() -> None:
     if current.empty:
         st.info("No current signals available. Run the pipeline to generate artifacts.")
     else:
-        st.dataframe(current, use_container_width=True)
+        if "market_cap" in current.columns:
+            styled_current = current.style.format({"market_cap": _format_market_cap})
+            st.dataframe(styled_current, use_container_width=True)
+        else:
+            st.dataframe(current, use_container_width=True)
+
+    st.divider()
 
     st.divider()
 
@@ -122,13 +151,25 @@ def main() -> None:
             if chart_df.empty:
                 st.write("No heatmap data available.")
             else:
+                chart_df["mcap_bucket_label"] = chart_df["mcap_bucket"].map(_format_bucket_label)
+                ordered_labels = list(dict.fromkeys(chart_df["mcap_bucket_label"].tolist()))
+                chart_df["mcap_bucket_label"] = pd.Categorical(
+                    chart_df["mcap_bucket_label"],
+                    categories=ordered_labels,
+                    ordered=True,
+                )
                 st.vega_lite_chart(
                     chart_df,
                     {
                         "mark": {"type": "rect"},
                         "encoding": {
                             "x": {"field": "score_bin", "type": "ordinal", "title": "Score Bin"},
-                            "y": {"field": "mcap_bucket", "type": "ordinal", "title": "Market Cap Bucket"},
+                            "y": {
+                                "field": "mcap_bucket_label",
+                                "type": "ordinal",
+                                "title": "Market Cap Bucket",
+                                "axis": {"labelLimit": 300},
+                            },
                             "color": {
                                 "field": "metric",
                                 "type": "quantitative",
@@ -137,7 +178,7 @@ def main() -> None:
                             },
                             "tooltip": [
                                 {"field": "score_bin", "type": "ordinal", "title": "Score Bin"},
-                                {"field": "mcap_bucket", "type": "ordinal", "title": "Market Cap"},
+                                {"field": "mcap_bucket_label", "type": "ordinal", "title": "Market Cap"},
                                 {"field": "metric", "type": "quantitative", "title": "Win Rate (%)"},
                                 {"field": "trades", "type": "quantitative", "title": "Trades"},
                             ],
