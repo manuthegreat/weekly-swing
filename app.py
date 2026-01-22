@@ -92,6 +92,8 @@ def main() -> None:
 
     st.divider()
 
+    st.divider()
+
     st.header("Backtest Results")
     summary_col, setup_col = st.columns(2)
     with summary_col:
