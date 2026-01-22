@@ -51,9 +51,16 @@ def run_country(country: str, mode: str, n_signal_days: int = 3) -> None:
 
     meta = _load_meta(meta_path)
     today = datetime.utcnow().date().isoformat()
-    if mode == "daily" and meta.get("run_date") == today:
+    heatmap_files = [
+        artifact_dir / "heatmap_score_x_mcap_winrate.parquet",
+        artifact_dir / "heatmap_score_x_mcap_winrate_long.parquet",
+    ]
+    missing_heatmap = any(not path.exists() for path in heatmap_files)
+    if mode == "daily" and meta.get("run_date") == today and not missing_heatmap:
         print(f"[{country}] Backtest already ran today ({today}); skipping.")
         return
+    if mode == "daily" and meta.get("run_date") == today and missing_heatmap:
+        print(f"[{country}] Backtest ran today ({today}) but heatmap artifacts are missing; rebuilding.")
 
     trades, entries, summary_overall, summary_by, exit_breakdown, summary_by_year, signals = run_backtest(
         df, cfg, indicators_precomputed=True
