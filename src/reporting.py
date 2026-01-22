@@ -412,3 +412,37 @@ def summarize_heatmap_score_x_mcap(
 
     combined = combined.reset_index().rename(columns={"index": "mcap_bucket"})
     return combined
+
+
+def summarize_heatmap_score_x_mcap_long(
+    trades_enriched: pd.DataFrame,
+    mcap_q: int = 5,
+) -> pd.DataFrame:
+    cols = ["mcap_bucket", "score_bin", "metric", "trades"]
+    if trades_enriched is None or trades_enriched.empty:
+        return pd.DataFrame(columns=cols)
+
+    t = trades_enriched.dropna(subset=["score", "market_cap", "pnl_pct_net"]).copy()
+    if t.empty:
+        return pd.DataFrame(columns=cols)
+
+    bins = [-1e-9, 0.2, 0.4, 0.6, 0.8, 1.000000001]
+    labels = ["0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"]
+    t["score_bin"] = pd.cut(t["score"].astype(float), bins=bins, labels=labels, include_lowest=True)
+
+    try:
+        t["mcap_bucket"] = pd.qcut(t["market_cap"].astype(float), q=mcap_q, duplicates="drop")
+    except Exception:
+        return pd.DataFrame(columns=cols)
+
+    t["is_win"] = (t["pnl_pct_net"].astype(float) > 0).astype(int)
+
+    grp_cols = ["score_bin", "mcap_bucket"]
+    grouped = t.groupby(grp_cols, dropna=False, observed=True)
+    metric = grouped["is_win"].mean().mul(100.0).rename("metric")
+    trades = grouped.size().rename("trades")
+
+    out = pd.DataFrame({"metric": metric, "trades": trades}).reset_index()
+    out["mcap_bucket"] = out["mcap_bucket"].map(lambda x: _fmt_interval(x, 2))
+    out["score_bin"] = out["score_bin"].astype(str)
+    return out[cols].sort_values(["mcap_bucket", "score_bin"]).reset_index(drop=True)

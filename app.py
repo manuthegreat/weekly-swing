@@ -7,14 +7,16 @@ import pandas as pd
 import streamlit as st
 
 ARTIFACTS_DIR = Path("artifacts")
-CACHE_DIR = Path("cache_daily")
 
 
 @st.cache_data(show_spinner=False)
 def load_parquet(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
-    return pd.read_parquet(path)
+    try:
+        return pd.read_parquet(path)
+    except Exception:
+        return pd.DataFrame()
 
 
 @st.cache_data(show_spinner=False)
@@ -45,74 +47,70 @@ def main() -> None:
         st.sidebar.write(f"Last cached bar: {meta.get('last_cached_bar', 'N/A')}")
         st.sidebar.write(f"Expected last bar: {meta.get('expected_last_bar', 'N/A')}")
 
+    current = load_parquet(artifacts / "current_signals.parquet")
     summary = load_parquet(artifacts / "summary_overall.parquet")
     summary_by = load_parquet(artifacts / "summary_by_setup.parquet")
+    exit_breakdown = load_parquet(artifacts / "exit_breakdown.parquet")
+    summary_by_year = load_parquet(artifacts / "summary_by_year.parquet")
     trades = load_parquet(artifacts / "trades.parquet")
     entries = load_parquet(artifacts / "entries.parquet")
-    current = load_parquet(artifacts / "current_signals.parquet")
-    signals = load_parquet(artifacts / "signals.parquet")
+    heatmap = load_parquet(artifacts / "heatmap_score_x_mcap_winrate.parquet")
+    heatmap_long = load_parquet(artifacts / "heatmap_score_x_mcap_winrate_long.parquet")
 
-    st.header("Summary")
+    st.header("Current Signals")
+    if current.empty:
+        st.info("No current signals available. Run the pipeline to generate artifacts.")
+    else:
+        st.dataframe(current, use_container_width=True)
+
+    st.header("Backtest Results")
+    st.subheader("Overall Summary")
     if summary.empty:
         st.info("No summary data available. Run the pipeline to generate artifacts.")
     else:
         st.dataframe(summary, use_container_width=True)
 
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.subheader("Summary by Setup")
-        if summary_by.empty:
-            st.write("No setup breakdown yet.")
-        else:
-            st.dataframe(summary_by, use_container_width=True)
-    with col_b:
-        st.subheader("Current Signals")
-        if current.empty:
-            st.write("No current signals.")
-        else:
-            st.dataframe(current, use_container_width=True)
-
-    st.header("Trades & Entries")
-    col_c, col_d = st.columns(2)
-    with col_c:
-        st.subheader("Recent Trades")
-        if trades.empty:
-            st.write("No trades yet.")
-        else:
-            st.dataframe(trades.tail(200), use_container_width=True)
-    with col_d:
-        st.subheader("Recent Entries")
-        if entries.empty:
-            st.write("No entries yet.")
-        else:
-            st.dataframe(entries.tail(200), use_container_width=True)
-
-    st.header("Signals")
-    if signals.empty:
-        st.write("No signals data available.")
+    st.subheader("Summary by Setup")
+    if summary_by.empty:
+        st.write("No setup breakdown yet.")
     else:
-        st.dataframe(signals.tail(200), use_container_width=True)
+        st.dataframe(summary_by, use_container_width=True)
 
-    st.header("Price Chart")
-    cache_path = CACHE_DIR / f"{country}_daily.parquet"
-    ohlc = load_parquet(cache_path)
-    if ohlc.empty:
-        st.info("No cached OHLC data available yet.")
-        return
+    st.subheader("Exit Reasons")
+    if exit_breakdown.empty:
+        st.write("No exit breakdown yet.")
+    else:
+        st.dataframe(exit_breakdown, use_container_width=True)
 
-    tickers = sorted(ohlc["ticker"].dropna().unique().tolist())
-    if not tickers:
-        st.info("No tickers in cache.")
-        return
+    st.subheader("Summary by Year")
+    if summary_by_year.empty:
+        st.write("No yearly summary yet.")
+    else:
+        st.dataframe(summary_by_year, use_container_width=True)
 
-    ticker = st.selectbox("Ticker", tickers, index=0)
-    series = ohlc[ohlc["ticker"] == ticker].sort_values("date")
-    if series.empty:
-        st.write("No data for selected ticker.")
-        return
+    st.subheader("Trades")
+    if trades.empty:
+        st.write("No trades yet.")
+    else:
+        st.dataframe(trades, use_container_width=True)
 
-    chart = series.set_index("date")["close"]
-    st.line_chart(chart, height=300)
+    st.subheader("Entries")
+    if entries.empty:
+        st.write("No entries yet.")
+    else:
+        st.dataframe(entries, use_container_width=True)
+
+    st.header("Heatmap (Score x Market Cap)")
+    if heatmap.empty and heatmap_long.empty:
+        st.info("Heatmap artifacts not found yet. Run the pipeline to generate them.")
+    else:
+        if heatmap.empty:
+            st.write("No heatmap data available.")
+        else:
+            st.dataframe(heatmap, use_container_width=True)
+        if not heatmap_long.empty:
+            with st.expander("Heatmap (long format)"):
+                st.dataframe(heatmap_long, use_container_width=True)
 
 
 if __name__ == "__main__":
