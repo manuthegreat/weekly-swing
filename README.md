@@ -32,6 +32,14 @@ streamlit run app.py
 
 The app only reads artifacts and cached OHLC data. Run the pipeline at least once so the app has data to display.
 
+## Git LFS for parquet outputs
+
+Daily artifacts and cache files can grow quickly. This repo tracks parquet outputs with Git LFS to keep Git pushes reliable. If you are committing artifacts locally, install Git LFS and run:
+
+```bash
+git lfs install
+```
+
 ## Daily GitHub Action
 
 The workflow in `.github/workflows/daily_run.yml` runs the pipeline once per day and commits updated artifacts/cache data back to the repository.

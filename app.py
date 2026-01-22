@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -20,7 +21,10 @@ def load_parquet(path: Path) -> pd.DataFrame:
 def load_json(path: Path) -> dict:
     if not path.exists():
         return {}
-    return pd.read_json(path, typ="series").to_dict()
+    try:
+        return json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return {}
 
 
 def artifact_dir(country: str) -> Path:
