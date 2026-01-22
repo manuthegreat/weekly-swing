@@ -2,7 +2,12 @@ name: Daily pipeline
 
 on:
   schedule:
+    # 07:15 AM Singapore time (UTC+8)
     - cron: "15 23 * * 1-5"
+
+    # 05:00 PM Singapore time (UTC+8)
+    - cron: "0 9 * * 1-5"
+
   workflow_dispatch:
 
 jobs:
@@ -10,16 +15,25 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Git LFS
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git-lfs
-          git lfs install
+      # --------------------------------------------------
+      # Restore cached daily price data (NOT committed)
+      # --------------------------------------------------
+      - name: Restore cache_daily
+        uses: actions/cache@v4
+        with:
+          path: cache_daily
+          key: cache_daily-${{ runner.os }}-${{ github.ref_name }}
+          restore-keys: |
+            cache_daily-${{ runner.os }}-
 
+      # --------------------------------------------------
+      # Python setup
+      # --------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -30,17 +44,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # --------------------------------------------------
+      # Run pipeline (updates cache + writes artifacts)
+      # --------------------------------------------------
       - name: Run pipeline
         run: python -m src.pipeline daily
 
+      # --------------------------------------------------
+      # Commit ONLY artifacts (small, safe)
+      # --------------------------------------------------
       - name: Commit artifacts
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add artifacts cache_daily
+
+          git add artifacts
+
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
           fi
+
           git commit -m "chore: update daily artifacts"
           git push
