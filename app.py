@@ -133,7 +133,7 @@ def main() -> None:
                                 "field": "metric",
                                 "type": "quantitative",
                                 "title": "Win Rate (%)",
-                                "scale": {"scheme": "blues"},
+                                "scale": {"scheme": "redyellowgreen"},
                             },
                             "tooltip": [
                                 {"field": "score_bin", "type": "ordinal", "title": "Score Bin"},
@@ -145,8 +145,6 @@ def main() -> None:
                     },
                     use_container_width=True,
                 )
-                with st.expander("Heatmap data (long format)"):
-                    st.dataframe(heatmap_long, use_container_width=True)
         elif not heatmap.empty:
             st.dataframe(heatmap, use_container_width=True)
 
