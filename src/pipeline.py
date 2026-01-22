@@ -11,7 +11,11 @@ import pandas as pd
 from src.backtest import run_backtest
 from src.config import country_configs
 from src.data import load_or_build_cache
-from src.reporting import expected_last_daily_bar_date
+from src.reporting import (
+    expected_last_daily_bar_date,
+    summarize_heatmap_score_x_mcap,
+    summarize_heatmap_score_x_mcap_long,
+)
 from src.setups import show_grouped_signals_last_n_trading_days
 from src.universes import get_universe
 
@@ -68,6 +72,18 @@ def run_country(country: str, mode: str, n_signal_days: int = 3) -> None:
             na_position="last",
         ).reset_index(drop=True)
 
+    heatmap_combined = pd.DataFrame()
+    heatmap_long = pd.DataFrame(columns=["mcap_bucket", "score_bin", "metric", "trades"])
+    if not trades.empty and not signals.empty:
+        join_cols = ["signal_date", "ticker", "setup_tag"]
+        trades_enriched = trades.copy()
+        trades_enriched["signal_date"] = pd.to_datetime(trades_enriched["signal_date"]).dt.normalize()
+        signals_enriched = signals[join_cols + ["score", "market_cap"]].copy()
+        signals_enriched["signal_date"] = pd.to_datetime(signals_enriched["signal_date"]).dt.normalize()
+        trades_enriched = trades_enriched.merge(signals_enriched, on=join_cols, how="left")
+        heatmap_combined = summarize_heatmap_score_x_mcap(trades_enriched, mcap_q=10, value="win_rate_%")
+        heatmap_long = summarize_heatmap_score_x_mcap_long(trades_enriched, mcap_q=10)
+
     trades.to_parquet(artifact_dir / "trades.parquet", index=False)
     entries.to_parquet(artifact_dir / "entries.parquet", index=False)
     summary_overall.to_parquet(artifact_dir / "summary_overall.parquet", index=False)
@@ -76,6 +92,14 @@ def run_country(country: str, mode: str, n_signal_days: int = 3) -> None:
     summary_by_year.to_parquet(artifact_dir / "summary_by_year.parquet", index=False)
     signals.to_parquet(artifact_dir / "signals.parquet", index=False)
     current.to_parquet(artifact_dir / "current_signals.parquet", index=False)
+    heatmap_combined.to_parquet(
+        artifact_dir / "heatmap_score_x_mcap_winrate.parquet",
+        index=False,
+    )
+    heatmap_long.to_parquet(
+        artifact_dir / "heatmap_score_x_mcap_winrate_long.parquet",
+        index=False,
+    )
 
     last_cached = pd.to_datetime(df["date"]).max().date().isoformat() if not df.empty else None
     expected_last = expected_last_daily_bar_date(country).date().isoformat()
