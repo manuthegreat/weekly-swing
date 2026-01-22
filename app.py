@@ -63,54 +63,90 @@ def main() -> None:
     else:
         st.dataframe(current, use_container_width=True)
 
+    st.divider()
+
     st.header("Backtest Results")
-    st.subheader("Overall Summary")
-    if summary.empty:
-        st.info("No summary data available. Run the pipeline to generate artifacts.")
-    else:
-        st.dataframe(summary, use_container_width=True)
+    summary_col, setup_col = st.columns(2)
+    with summary_col:
+        st.subheader("Overall Summary")
+        if summary.empty:
+            st.info("No summary data available. Run the pipeline to generate artifacts.")
+        else:
+            st.dataframe(summary, use_container_width=True)
 
-    st.subheader("Summary by Setup")
-    if summary_by.empty:
-        st.write("No setup breakdown yet.")
-    else:
-        st.dataframe(summary_by, use_container_width=True)
+    with setup_col:
+        st.subheader("Summary by Setup")
+        if summary_by.empty:
+            st.write("No setup breakdown yet.")
+        else:
+            st.dataframe(summary_by, use_container_width=True)
 
-    st.subheader("Exit Reasons")
-    if exit_breakdown.empty:
-        st.write("No exit breakdown yet.")
-    else:
-        st.dataframe(exit_breakdown, use_container_width=True)
+    exit_col, year_col = st.columns(2)
+    with exit_col:
+        st.subheader("Exit Reasons")
+        if exit_breakdown.empty:
+            st.write("No exit breakdown yet.")
+        else:
+            st.dataframe(exit_breakdown, use_container_width=True)
 
-    st.subheader("Summary by Year")
-    if summary_by_year.empty:
-        st.write("No yearly summary yet.")
-    else:
-        st.dataframe(summary_by_year, use_container_width=True)
+    with year_col:
+        st.subheader("Summary by Year")
+        if summary_by_year.empty:
+            st.write("No yearly summary yet.")
+        else:
+            st.dataframe(summary_by_year, use_container_width=True)
 
-    st.subheader("Trades")
-    if trades.empty:
-        st.write("No trades yet.")
-    else:
-        st.dataframe(trades, use_container_width=True)
+    st.subheader("Trades & Entries")
+    trades_tab, entries_tab = st.tabs(["Trades", "Entries"])
+    with trades_tab:
+        if trades.empty:
+            st.write("No trades yet.")
+        else:
+            st.dataframe(trades, use_container_width=True)
+    with entries_tab:
+        if entries.empty:
+            st.write("No entries yet.")
+        else:
+            st.dataframe(entries, use_container_width=True)
 
-    st.subheader("Entries")
-    if entries.empty:
-        st.write("No entries yet.")
-    else:
-        st.dataframe(entries, use_container_width=True)
+    st.divider()
 
     st.header("Heatmap (Score x Market Cap)")
     if heatmap.empty and heatmap_long.empty:
         st.info("Heatmap artifacts not found yet. Run the pipeline to generate them.")
     else:
-        if heatmap.empty:
-            st.write("No heatmap data available.")
-        else:
-            st.dataframe(heatmap, use_container_width=True)
         if not heatmap_long.empty:
-            with st.expander("Heatmap (long format)"):
-                st.dataframe(heatmap_long, use_container_width=True)
+            chart_df = heatmap_long.copy()
+            chart_df["metric"] = pd.to_numeric(chart_df["metric"], errors="coerce")
+            chart_df = chart_df.dropna(subset=["metric"])
+            if chart_df.empty:
+                st.write("No heatmap data available.")
+            else:
+                st.vega_lite_chart(
+                    chart_df,
+                    {
+                        "mark": {"type": "rect"},
+                        "encoding": {
+                            "x": {"field": "score_bin", "type": "ordinal", "title": "Score Bin"},
+                            "y": {"field": "mcap_bucket", "type": "ordinal", "title": "Market Cap Bucket"},
+                            "color": {
+                                "field": "metric",
+                                "type": "quantitative",
+                                "title": "Win Rate (%)",
+                                "scale": {"scheme": "redyellowgreen"},
+                            },
+                            "tooltip": [
+                                {"field": "score_bin", "type": "ordinal", "title": "Score Bin"},
+                                {"field": "mcap_bucket", "type": "ordinal", "title": "Market Cap"},
+                                {"field": "metric", "type": "quantitative", "title": "Win Rate (%)"},
+                                {"field": "trades", "type": "quantitative", "title": "Trades"},
+                            ],
+                        },
+                    },
+                    use_container_width=True,
+                )
+        elif not heatmap.empty:
+            st.dataframe(heatmap, use_container_width=True)
 
 
 if __name__ == "__main__":
