@@ -350,21 +350,22 @@ def summarize_heatmap_score_x_mcap(
     mcap_q: int = 5,
     value: str = "win_rate_%",
 ) -> pd.DataFrame:
+    labels = ["0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"]
+    cols = ["mcap_bucket"] + labels
     if trades_enriched is None or trades_enriched.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=cols)
 
     t = trades_enriched.dropna(subset=["score", "market_cap", "pnl_pct_net"]).copy()
     if t.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=cols)
 
     bins = [-1e-9, 0.2, 0.4, 0.6, 0.8, 1.000000001]
-    labels = ["0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"]
     t["score_bin"] = pd.cut(t["score"].astype(float), bins=bins, labels=labels, include_lowest=True)
 
     try:
         t["mcap_bucket"] = pd.qcut(t["market_cap"].astype(float), q=mcap_q, duplicates="drop")
     except Exception:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=cols)
 
     t["is_win"] = (t["pnl_pct_net"].astype(float) > 0).astype(int)
 
@@ -411,6 +412,7 @@ def summarize_heatmap_score_x_mcap(
         )
 
     combined = combined.reset_index().rename(columns={"index": "mcap_bucket"})
+    combined = combined.reindex(columns=cols, fill_value="")
     return combined
 
 
