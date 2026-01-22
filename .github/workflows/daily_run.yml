@@ -5,8 +5,8 @@ on:
     # 07:15 AM Singapore time (UTC+8)
     - cron: "15 23 * * 1-5"
 
-    # 05:00 PM Singapore time (UTC+8)
-    - cron: "0 9 * * 1-5"
+    # 05:30 PM Singapore time (UTC+8)
+    - cron: "30 9 * * 1-5"
 
   workflow_dispatch:
 
