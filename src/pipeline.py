@@ -57,8 +57,7 @@ def run_country(country: str, mode: str, n_signal_days: int = 3) -> None:
     ]
     missing_heatmap = any(not path.exists() for path in heatmap_files)
     if mode == "daily" and meta.get("run_date") == today and not missing_heatmap:
-        print(f"[{country}] Backtest already ran today ({today}); skipping.")
-        return
+        print(f"[{country}] Backtest already ran today ({today}); rerunning calculations.")
     if mode == "daily" and meta.get("run_date") == today and missing_heatmap:
         print(f"[{country}] Backtest ran today ({today}) but heatmap artifacts are missing; rebuilding.")
 
