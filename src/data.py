@@ -78,6 +78,19 @@ def build_or_update_daily_cache(
         os.remove(path)
         return build_or_update_daily_cache(country, universe, cfg, full_start=full_start, end=end)
 
+    cached_tickers = set(df_cached["ticker"].dropna().astype(str).unique())
+    universe_tickers = set(tickers)
+    missing_tickers = universe_tickers - cached_tickers
+    if missing_tickers:
+        print(
+            f"[{country}] Cache missing {len(missing_tickers)} tickers; rebuilding full -> {path}"
+        )
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        return build_or_update_daily_cache(country, universe, cfg, full_start=full_start, end=end)
+
     last_date = pd.to_datetime(df_cached["date"]).max().normalize()
     expected_last = expected_last_daily_bar_date(country).normalize()
 
