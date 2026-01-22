@@ -43,6 +43,7 @@ def build_or_update_daily_cache(
     if end is None:
         end = (datetime.today() + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
 
+    os.makedirs(CACHE_DIR, exist_ok=True)
     path = cache_path(country)
     tickers = universe["Ticker"].dropna().astype(str).unique().tolist()
 
@@ -63,7 +64,15 @@ def build_or_update_daily_cache(
         return _ensure_datetime(df_ind)
 
     print(f"[{country}] Loading cache -> {path}")
-    df_cached = _ensure_datetime(pd.read_parquet(path))
+    try:
+        df_cached = _ensure_datetime(pd.read_parquet(path))
+    except Exception as exc:
+        print(f"[{country}] Cache read failed; rebuilding ({exc}).")
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        return build_or_update_daily_cache(country, universe, cfg, full_start=full_start, end=end)
 
     if df_cached.empty:
         os.remove(path)
