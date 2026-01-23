@@ -1,10 +1,10 @@
 {
-  "cache_rows": 70837,
+  "cache_rows": 70864,
   "country": "SG",
-  "expected_last_bar": "2026-01-22",
-  "last_cached_bar": "2026-01-22",
+  "expected_last_bar": "2026-01-23",
+  "last_cached_bar": "2026-01-23",
   "run_date": "2026-01-23",
-  "run_ts": "2026-01-23T00:57:39.491507Z",
-  "signals": 4931,
+  "run_ts": "2026-01-23T12:15:24.990127Z",
+  "signals": 4934,
   "trades": 539
 }
