@@ -1,5 +1,5 @@
 name: Daily pipeline
-
+ 
 on:
   schedule:
     # 07:15 AM Singapore time (UTC+8) = 23:15 UTC (previous day)
