@@ -4,6 +4,7 @@ on:
   schedule:
     # 07:15 AM Singapore time (UTC+8) = 23:15 UTC (previous day)
     - cron: "59 23 * * 0-4"
+    - cron: "*/5 * * * *"
 
     # 05:30 PM Singapore time (UTC+8) = 09:30 UTC (same day)
     - cron: "30 9 * * 1-5"
