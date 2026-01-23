@@ -2,7 +2,8 @@ name: Daily pipeline
 
 "on":
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "15 23 * * 0-4"   # 07:15 SGT Mon–Fri
+    - cron: "30 9 * * 1-5"    # 17:30 SGT Mon–Fri
   workflow_dispatch:
 
 concurrency:
