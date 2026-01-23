@@ -56,5 +56,7 @@ jobs:
           fi
 
           git commit -m "chore: update daily artifacts"
+          git reset --hard
+          git clean -fd cache_daily
           git pull --rebase origin main
           git push origin main
