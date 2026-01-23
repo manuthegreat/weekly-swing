@@ -1,10 +1,10 @@
 {
-  "cache_rows": 1234210,
+  "cache_rows": 1234713,
   "country": "US",
-  "expected_last_bar": "2026-01-21",
-  "last_cached_bar": "2026-01-21",
-  "run_date": "2026-01-22",
-  "run_ts": "2026-01-22T06:21:21.046813Z",
-  "signals": 48356,
-  "trades": 2113
+  "expected_last_bar": "2026-01-22",
+  "last_cached_bar": "2026-01-22",
+  "run_date": "2026-01-23",
+  "run_ts": "2026-01-23T00:57:29.523099Z",
+  "signals": 47534,
+  "trades": 2084
 }

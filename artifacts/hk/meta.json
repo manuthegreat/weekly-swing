@@ -1,10 +1,10 @@
 {
   "cache_rows": 185255,
   "country": "HK",
-  "expected_last_bar": "2026-01-21",
+  "expected_last_bar": "2026-01-22",
   "last_cached_bar": "2026-01-22",
-  "run_date": "2026-01-22",
-  "run_ts": "2026-01-22T06:21:07.959602Z",
+  "run_date": "2026-01-23",
+  "run_ts": "2026-01-23T00:56:12.853823Z",
   "signals": 11415,
   "trades": 1226
 }
